@@ -1,7 +1,7 @@
 ## High res populations
 ## Calculate exposure for pk=1 scenario with various ks
 
-## load libraries and data
+## S1. load libraries and data
 {
   source("./FaithfulBetaSamplingFunctions.R")
   RESULTSHIGHRES = "../resultsHighres/"
@@ -9,9 +9,7 @@
 }
 
 
-## learn nescessary population size N to achieve a target K
-## and plot results
-## this experiment is very slow to run
+## NEW set N to achieve a target K
 {
   exposedres = c()
   for (agi in 1:6) { 
@@ -110,13 +108,14 @@
 }
 
 
-#plot single figures for paper: shower 10 sec, shower 5 min, low res all acts
+#plot single figures for paper: low res all acts, highres shower 10 sec, taps 30s clothes 5min, 
 pdf(file=paste(FIGURESDIR,
                sprintf("SideAttackOutliersFigure.pdf",highresaggseconds[agi]),
                sep=""),
-    width=12,height=4.5)
+    width=10,height=3.2) #was 16,4.5
 {
-par(mfrow=c(1,3))
+caption = c()
+par(mfrow=c(1,4))
   #low res data
   {
     ## Low res data
@@ -133,12 +132,13 @@ par(mfrow=c(1,3))
         title = "Low Resolution All Activities"
         plot(res$V2,type="b",col=ki,lwd=2,
              ylim=c(0,NN),xaxt="n",
-             xlab="Temporal Resolution",ylab="Exposed HHs")
+             xlab="Temporal Resolution\n(a)",ylab="Exposed HHs")
         axis(1,1:6,lowresaggnames)
         abline(h=NN/2,lty="dotted") #50% safe line
         abline(h=NN,lty="dotted") #100% safe line
         axis(4)
-        title(title)
+        #title(title) do this in caption
+        caption = c(caption, "(a)", title)
       } else {
         res = lowresoutliers[kanon==kas[ki], ]
         lines(res$V2,type="b",col=ki,lwd=2)
@@ -155,10 +155,14 @@ par(mfrow=c(1,3))
     exposedres = readRDS(paste(RESULTSHIGHRES,"largePopulationHighres.rds",sep=""))
     kas=unique(exposedres$Kanon)
     NN = exposedres$NN[1]
-    activityID=2
+    #activityID=2
 
-    for (agi in c(1,4)) {
+    for (i in 1:3) 
+    { #3 subfigs
+      activityID = c(2,3,4)[i]
+      agi = c(1,2,4)[i]
       ag = highresaggselection[agi]
+      subfig = paste("Population Size\n",c("(b)","(c)","(d)")[i],sep="")
       for (ki in 1:5) {
         if (ki==1) {
           res = exposedres[actID==activityID & Agg==ag & Kanon==kas[ki] & Beta==0.1, ]
@@ -167,11 +171,12 @@ par(mfrow=c(1,3))
                           highresactivitynames[activityID],highresaggnames[agi])
           plot(res[,.(N,exposed)],type="b",col=ki,lwd=2,
                ylim=c(0,NN),xlim=c(0,NN),
-               xlab="Population Size",ylab="Exposed HHs")
+               xlab=subfig,ylab="Exposed HHs")
           abline(a=0,b=0.5,lty="dotted") #50% safe line
           abline(a=0,b=1.0,lty="dotted") #100% safe line
           axis(4)
-          title(title)
+          #title(title) save for caption
+          caption = rbind(caption, c(c("(b)","(c)","(d)")[i], title))
         } else {
           res = exposedres[actID==activityID & Agg==ag & Kanon==kas[ki] & Beta==0.1, ]
           res$exposed = res$N - res$Inliers
@@ -226,19 +231,23 @@ pdf(file=paste(FIGURESDIR,"highresPopulationVSresults10secto1min.pdf",sep=""),
 dev.off()
 
 
-## smaller figure for paper
+## smaller figure for paper, needs to show different k and resolution
+{
 pdf(file=paste(FIGURESDIR,"highresSampleSelection.pdf",sep=""),
-      width=10,height=3.5)
+      width=10,height=3)
   {
     exposedres = readRDS(paste(RESULTSHIGHRES,"largePopulationHighres.rds",sep=""))
-    par(mfrow=c(1,3))
+    caption = c()
+    par(mfrow=c(1,4))
     exposedres$rmsepct = exposedres$RMSE*100
     casesKBA = rbind(
-      c(30,0.05,3),
-      c(5,0.10,2),
+      c(30,0.05,5),
+      c(30,0.05,2),
+      c(10,0.05,2),
       c(1,0.25,1))
-    rr = range(exposedres[Kanon<=50 & Beta<=0.25 & Agg<=60 ,rmsepct],na.rm=TRUE)
-    for (i in 1:3) {
+    subfig = c("(a)","(b)","(c)","(d)")
+    rr = range(exposedres[Kanon<=50 & Beta<=0.25 & Agg<=300 ,rmsepct],na.rm=TRUE)
+    for (i in 1:4) {
       ki = casesKBA[i,1]
       bi = casesKBA[i,2]
       agipos = casesKBA[i,3]
@@ -246,23 +255,93 @@ pdf(file=paste(FIGURESDIR,"highresSampleSelection.pdf",sep=""),
       feasible = exposedres[Kanon==ki & Beta==bi & Agg==agi,]
       plot(feasible[actID==1,.(N,rmsepct)],type="b",lwd=2,
                col=highresactivitycols[1],ylim=rr,
-               xlab="Population size",ylab="Sample RMSE (%)",
-               main=sprintf("K=%d B=%d%% %s",ki,round(bi*100),
-                            highresaggnames[agipos]))
+               xlab=paste("Population size\n",subfig[i],sep=""),ylab="Sample RMSE (% HHs)")
+      title=sprintf("K=%d B=%d%% %s",ki,round(bi*100),
+                           highresaggnames[agipos])
+      caption = rbind(caption,c(subfig[i],title))
+             
           for (ai in 2:6) {
             lines(feasible[actID==ai,.(N,rmsepct)],
                   type="b",lwd=2,col=highresactivitycols[ai])
           }
         grid()
-        legend("topleft",highresactivitynames[1:6],bg="white",ncol=2,
+        if (i==4) { #same caption for all 4
+        legend("topleft",highresactivitynames[1:6],bg="white",ncol=1,
              lty=rep(1,times=6),lwd=rep(2,times=6),
              col=highresactivitycols[1:6])
+        }
        
     }
 
     par(mfrow=c(1,1))
   }
 dev.off()
+}
 
-## END HERE
+## show other results
+if (FALSE)
+{
+plot(exposedres$RMSE,type="p",col=exposedres$actID)
+boxplot(exposedres$RMSE ~ exposedres$actID)
 
+NN = exposedres$NN[1]
+
+feasible = exposedres[!is.na(exposedres$RMSE) & RMSE<0.01,]
+
+boxplot(feasible$RMSE ~ feasible$N)
+boxplot(feasible$RMSE ~ feasible$Kanon)
+boxplot(feasible$RMSE ~ feasible$actID)
+boxplot(feasible$RMSE ~ feasible$Agg,
+        names.arg=highresaggnames)
+boxplot(feasible$RMSE ~ feasible$Beta)
+
+## TODO join all acts?
+table(feasible[Kanon==20,.(Beta,N)])
+table(feasible[Kanon==10,.(Beta,N)])
+table(feasible[Kanon==5,.(Beta,N)])
+}
+
+
+
+#some other exps - not needed here 
+
+if (FALSE) 
+  {
+
+par(mfrow=c(2,4))
+for (agi in unique(exposedres$Agg)) {
+  for (ai in 1:6) {
+    for (bi in betas) {
+    thiscase = exposedres[actID==ai & Agg==agi & Beta==bi,]
+
+    boxplot(thiscase$RMSE ~ thiscase$N,col=highresactivitycols[ai],
+            main=sprintf("%s %d %d pct",
+             highresactivitynames[ai],agi*10,round(bi*100)))
+    }
+  }
+}
+    
+    for (ki in unique(exposedres$Kanon)) {
+      for (be in betas) {
+       thiscase = exposedres[actID==ai & Agg==agi & Kanon==ki & Beta==be,]
+       if (ki==1) {
+         plot(thiscase[,.(N,RMSE)],type="b",col=highresactivitycols[ai],
+              ylim=c(0,0.03),
+              main=paste(highresactivitynames[ai],agi*10))
+       } else {
+         lines(thiscase[,.(N,RMSE)],type="b",col=highresactivitycols[ai])
+       }
+      }
+    }
+par(mfrow=c(1,1))
+
+
+  for (n in unique(exposedres$N)) {
+    
+    thiscase = exposedres[N==n & actID==ai,]
+    
+    boxplot(exposedres[N==n & actID==ai,RMSE]*100 ~ 
+            exposedres[N==n & actID==ai,Beta],main=n,xlab="Beta",ylab="RMSE (%HHs)",
+            col=highresactivitycols[ai])
+  }
+}
