@@ -123,7 +123,9 @@
   # etc
 }
 
-## Trial 2: Pareto Front based on RMSE and EPS for any MCC > 0.9 and RMSE<1.0 : gives 3 contrasting solns, there are 28 for the full data
+## Trial 2: Pareto Front based on min N and min EPS 
+## for any MCC > 0.9 and RMSE<1.0pct : gives 3 contrasting solns, 
+## there are 28 for the full data
 {
   #variables to optimise on: min is best for all of these
   E2 = E[minMCC>0.9 & maxRMSEpct<1.0,][order(eps,N),] #just take an acceptable range of MCC
@@ -146,49 +148,114 @@
   ## choose first (larger) set for paper
   xtable(E2[which(P2front==1),.(kanon,beta,AggSeconds,N, eps,delta, minMCC,maxRMSEpct)],
          digits=c(0, 0,2,0,0, 3,-1, 3,1))
+}
+
+
   
-  ## plot pareto front results MAYBE REDO
-  if (FALSE)
+  ## Plot Pareto Fronts (dominating points marked)
+{
+
+  ## use min max norm to map all to 0,1
+  minmaxnorm <- function(vec) {
+    mi = min(vec)
+    mx = max(vec)
+    normvec = (vec-mi)/(mx-mi)
+    return (normvec)
+  }
+  
   {
-    pdf(file=paste(FIGURESDIR,"HighresParetoFrontMCCgr85.pdf",sep=""),width=6,height=6)
+  
+    ## E, P1 front Pareto Front based on MCC, RMSE and EPS
+    pdf(file=paste(FIGURESDIR,"HighresParetoFrontMCCRMSEEPS.pdf",sep=""),
+        width=7,height=7)
     {
-      par(mar=c(5, 4, 4, 4) + 0.1, mfrow=c(1,1))
-      pf = which(P2front==1)
-      plot(P2$eps,type="b",col="red",
-           xlab="Parameter Combinations (Resolution seconds indicated)",xaxt="n",
-           ylim=c(0,1.5),ylab="",yaxt="n")
-      #main="Pareto Front for 2 vars")
-      lines(pf,(P2$eps)[pf],type="p",col="red",pch=19,cex=1.5,ylab="",yaxt="n")
-      #axis(1,at=pf,labels=E2$AggSeconds[pf])
-      axis(1,at=1:5,labels=E2$AggSeconds)
-      #axis(1,at=pf,labels=E2$kanon[pf])
-      axis(2,at=(0:7)*0.2,labels=(0:7)*0.2,ylab="",col.axis="red",col.ticks ="red")
-      # add a title for the right axis
-      mtext("Differential Privacy Epsilon", side=2, line=3, cex.lab=1,las=0, col="red")
+      par(mar=c(2, 9, 2, 4) + 0.1, mfrow=c(1,1))
+      pf = which(P1front==1)
       
-      #show RMSE as percentage (of HHs population)
-      rscale = 40
-      lines(P2$maxRMSEpct*rscale,type="b",col="blue",ylab="",yaxt="n")
-      lines(pf,(P2$SampleRMSE*rscale)[pf],type="p",col="blue",pch=19,cex=1.5,ylab="",yaxt="n")
-      axis(4,at=(0:6)*0.2,labels=100*(0:6)*0.2/rscale,ylab="",col.axis="blue",col.ticks ="blue")
-      mtext("Sampling RMSE %", side=4, line=3, cex.lab=1,las=0, col="blue")
+      ## utility min eps
+      plot(minmaxnorm(E$eps),type="l",col="red",pch=1,cex=0.25,
+           xlab="", #"Parameter Combinations",
+           xaxt="n",
+           ylim=c(0,7),ylab="",yaxt="n")
+      lines(pf,(minmaxnorm(E$eps))[pf],type="p",col="red",pch=19,cex=1,ylab="",yaxt="n")
+      title("Pareto Front Eps,MCC,RMSE")
+    
+      ## utility min RMSE
+      lines(minmaxnorm(E$maxRMSEpct)+1.5,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(E$maxRMSEpct)+1.5)[pf],type="p",col="blue",pch=19,cex=1,ylab="",yaxt="n")
       
-      #lines(E2$kanon/50,type="b",col="green",ylab="",yaxt="n")
-      #lines(pf,(E2$kanon/50)[pf],type="p",col="green",pch=19,cex=1.5,ylab="",yaxt="n")
+      ## utility max minMCC
+      lines(E$minMCC+3,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(E$minMCC+3)[pf],type="p",col="blue",
+            pch=17,cex=1,ylab="",yaxt="n")
       
-      #lines(E2$beta,type="b",col="orange",ylab="",yaxt="n")
-      #lines(pf,(E2$beta)[pf],type="p",col="orange",pch=19,cex=1.5,ylab="",yaxt="n")
+      ## free vars
+      lines((minmaxnorm(E$delta)+4.5),type="l",col="red",pch=1,cex=0.25)
+      lines(pf,(minmaxnorm(E$delta)+4.5)[pf],type="p",col="red",pch=17,cex=1)
       
+      lines(minmaxnorm(E$N)+6,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(E$N)+6)[pf],type="p",col="blue",
+            pch=15,cex=1,ylab="",yaxt="n")
       
-      grid(ny=NA,nx=NA)
-      abline(v=pf,col="gray",lty="dotted")
-      abline(h=c(0,0.4,0.8,1.2),col="gray",lty="dotted")
-      legend("topleft",title="Pareto Front (dominating points marked)",bg="white",
-             c("Differential Privacy Epsilon","Sampling RMSE"),lty=c(1,1),
-             col=c("red","blue"),pch=c(19,19),pt.cex=1.5)
-      par(mfrow=c(1,1))
+      abline(h=c(0,1,1.5,2.5,3,4, 4.5,5.5,6,7),lty="dotted",col="gray")
+      axis(2,at=c(0.5,2,3.5,5,6.5),c("DP Epsilon","MCC","RMSE","DP Delta","N"),tick=FALSE,las=1)
+      axis(4,at=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),las=1,
+           c(round(range(E$eps),digits=2), 
+             round(range(E2$maxRMSEpct),digits=2),
+             round(range(E2$minMCC),digits=2),
+             signif(range(E2$delta),digits=1), 
+             range(E2$N) ))
+      abline(v=pf,lty="dotted",col="gray")
+      
     }
     dev.off()
+    
+    ## E2,P2 front
+    ## Trial 2: Pareto Front E2, P2 front based on min N and min EPS 
+    ## for any MCC > 0.9 and RMSE<1.0pct and delta<1-e04: gives 3 contrasting solns, 
+    pdf(file=paste(FIGURESDIR,"HighresParetoFrontEPSN.pdf",sep=""),
+        width=6,height=4.5)
+    {
+      par(mar=c(2, 9, 2, 4) + 0.1, mfrow=c(1,1))
+      pf = which(P2front==1)
+      plot(minmaxnorm(P2$eps),type="l",col="red",pch=1,cex=0.5,
+           xlab="", #Parameter Combinations",
+           xaxt="n",
+           ylim=c(0,7),ylab="",yaxt="n")
+      lines(pf,(minmaxnorm(P2$eps))[pf],type="p",col="red",pch=19,cex=1,ylab="",yaxt="n")
+      
+      
+      lines(minmaxnorm(P2$N)+1.5,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(P2$N)+1.5)[pf],type="p",col="blue",
+            pch=15,cex=1,ylab="",yaxt="n")
+      
+      ## privacy bounded
+      lines((minmaxnorm(E2$delta)+3),type="l",col="red",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(E2$delta)+3)[pf],type="p",col="red",pch=17,cex=1)
+      
+      ## utility bounded
+      lines(minmaxnorm(E2$maxRMSEpct)+4.5,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(E2$maxRMSEpct)+4.5)[pf],type="p",col="blue",pch=19,cex=1,ylab="",yaxt="n")
+      
+      lines(minmaxnorm(E2$minMCC)+6,type="l",col="blue",pch=1,cex=0.5)
+      lines(pf,(minmaxnorm(E2$minMCC)+6)[pf],type="p",col="blue",
+            pch=17,cex=1,ylab="",yaxt="n")
+ 
+      
+      abline(h=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),lty="dotted",col="gray")
+      axis(2,at=c(0.5,2,3.5,5,6.5),
+           c("DP Epsilon","Population N",
+             "DP Delta < 1e-04",
+             "Sampling RMSE < 1",
+             "Activity MCC > 0.9"),tick=FALSE,las=1)
+      axis(4,at=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),las=1,
+          c(round(range(E2$eps),digits=2), range(E2$N), signif(range(E2$delta),digits=1), 
+            round(range(E2$maxRMSEpct),digits=2), round(range(E2$minMCC),digits=2) ))
+      abline(v=pf,lty="dotted",col="gray")
+    }
+    dev.off()
+      
+
   }
   
 }
