@@ -24,8 +24,7 @@
   
   B = lowresfaithfulnessexperiments
   B1 = B[Kanon<50,lapply(.SD,max),by=c("Agg,Kanon,beta")] #same k as highres
-  B1$ActivityID=123
-  B1$maxRMSEpct = B1$SampleRMSE*100
+  B1$maxRMSEpct = B1$BestForAllSamplesRMSE*100  
   
   C = merge(A1,B1,by.x=c("AggHours","ActivityID"),by.y=c("Agg","ActivityID"))
   
@@ -82,8 +81,8 @@ E[which(P1front==1),][order(kanon,beta),]
 {
 #variables to optimise on: min is best for all of these
 
-E2 = E[MCC>0.9 & SampleRMSE<0.015 & kanon<50,][order(eps),]
-P2 = E2[,.(SampleRMSE,eps)]
+E2 = E[MCC>0.9 & BestForAllSamplesRMSE<0.015 & kanon<50,][order(eps),]
+P2 = E2[,.(BestForAllSamplesRMSE,eps)]
 nP2 = dim(P2)[1] #number of records
 P2front = rep(1,times=nP2) #1 if this dominates, set to 0 if any other dominates it
 for (r in 1:nP2) 
@@ -100,8 +99,10 @@ E2[which(P2front==1),][order(kanon,beta),] #same as E1
 }
 
 
-## show optimal points
-xtable(E[which(P1front==1),.(kanon,round(beta*100),AggHours,eps,delta,MCC,SampleRMSE*100)],
+## Table for paper
+## show optimal points for P2
+xtable(E2[which(P2front==1),.(kanon,round(beta*100),AggHours,
+          eps,delta,MCC,BestForAllSamplesRMSE*100)][order(kanon,V2),],
        digits=c(0,0,0,0, 3,-1, 1,1))
 
 
@@ -208,46 +209,5 @@ xtable(E[which(P1front==1),.(kanon,round(beta*100),AggHours,eps,delta,MCC,Sample
   
 }
 
-
-
-## show pareto front results
-pdf(file=paste(FIGURESDIR,"LowresParetoFrontMCCgr85pk6.pdf",sep=""),width=6,height=6)
-{
-par(mar=c(5, 4, 4, 4) + 0.1, mfrow=c(1,1))
-pf = which(P2front==1)
-plot(P2$eps,type="b",col="red",
-     xlab="Parameter Combinations (K-anon indicated)",xaxt="n",
-     ylim=c(0,1.5),ylab="",yaxt="n")
-     #main="Pareto Front for 2 vars")
-lines(pf,(P2$eps)[pf],type="p",col="red",pch=19,cex=1.5,ylab="",yaxt="n")
-#axis(1,at=pf,labels=E2$AggHours[pf]) #all selections are 1 hour
-axis(1,at=pf,labels=E2$kanon[pf])
-axis(2,at=(0:7)*0.2,labels=(0:7)*0.2,ylab="",col.axis="red",col.ticks ="red")
-# add a title for the right axis
-mtext("Differential Privacy Epsilon", side=2, line=3, cex.lab=1,las=0, col="red")
-
-#show RMSE as percentage (of HHs population)
-rscale = 40
-lines(P2$SampleRMSE*rscale,type="b",col="blue",ylab="",yaxt="n")
-lines(pf,(P2$SampleRMSE*rscale)[pf],type="p",col="blue",pch=19,cex=1.5,ylab="",yaxt="n")
-axis(4,at=(0:6)*0.2,labels=100*(0:6)*0.2/rscale,ylab="",col.axis="blue",col.ticks ="blue")
-mtext("Sampling RMSE %", side=4, line=3, cex.lab=1,las=0, col="blue")
-
-#lines(E2$kanon/50,type="b",col="green",ylab="",yaxt="n")
-#lines(pf,(E2$kanon/50)[pf],type="p",col="green",pch=19,cex=1.5,ylab="",yaxt="n")
-
-#lines(E2$beta,type="b",col="orange",ylab="",yaxt="n")
-#lines(pf,(E2$beta)[pf],type="p",col="orange",pch=19,cex=1.5,ylab="",yaxt="n")
-
-
-grid(ny=NA,nx=NA)
-abline(v=pf,col="gray",lty="dotted")
-abline(h=c(0,0.4,0.8,1.2),col="gray",lty="dotted")
-legend("topleft",title="Pareto Front (dominating points marked)",bg="white",
-       c("Differential Privacy Epsilon","Sampling RMSE"),lty=c(1,1),
-       col=c("red","blue"),pch=c(19,19),pt.cex=1.5)
-par(mfrow=c(1,1))
-}
-dev.off()
 
 

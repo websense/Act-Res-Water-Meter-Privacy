@@ -3,7 +3,7 @@
 ## Rachel Cardell-Oliver
 ## August 2022
 
-source("./GlobalParameters.R") #kanon choices
+source("./GlobalParameters.R") #for kanon choices
 
 
 ## Return RMSE accuracy HHs (in 0..1) for Leaks, Habits, Occupancy
@@ -12,7 +12,7 @@ source("./GlobalParameters.R") #kanon choices
 ## lowresActivityGT = readRDS(paste(RESULTSLOWRES,"lowresActivityGT.rds",sep=""))[[agg]][ai,,]
 ## outlierIDs list of identified outliers for this agg of acts
 ## eg mergedoutliers = as.data.table(lowresoutliers or highresoutliers)
-## uses SAMPLING_REPEATS=50 (set in GlobalParameters) to select the sample with best RMSE
+## uses SAMPLING_REPEATS=50 (set in GlobalParameters) to select the sample with best RMSE for this activity
 ## returns RMSE and the list of HHs that make up the best sample
 getSampleAccuracy <- function(activityGT,mergedoutliers,aggi=1,kai=50,beta=0.1) 
 {
@@ -64,8 +64,7 @@ getLargeSampleAccuracy <- function(activityGT,inlierhhs,beta=0.1)
   
   #baseline time series of number active HHs for different activities from full population 
   allperactivityTS = rowSums(activities)
-  
-  
+
   NB = round(N*beta)
   if (NB > length(inlierhhs)) { #check if sampling is possible
     print(sprintf("ERROR: betasize=%d > inliers=%d", NB, length(inlierhhs)))
@@ -80,11 +79,28 @@ getLargeSampleAccuracy <- function(activityGT,inlierhhs,beta=0.1)
     
     ## faithfulness results
     RMSE = rmse( allperactivityTS/N, sampleperactivityTS/NB ) 
-    res = cbind(res, RMSE)
+    res = cbind(res, c(RMSE, betacandidates))
   }
-  bestrmse = min(res)  #best rmse from multiple samplings
-  return(bestrmse)
+  best = order(res[,1])[1]  #best for all use case
+
+  return(list("RMSE"=res[best,1],"sampleHHs"=res[best,2:dim(res)[2]]))
 }
 
-
+## given a list of hhs as one sample and an activity matrix, 
+## return the RMSE between population and sample HH aggregates
+## used to check which is the best sampling across all activities
+checkSampleAccuracy <- function(activityGT,selectedhhs) 
+{
+  #baseline time series of number active HHs for different activities from full population 
+  N = dim(activityGT)[2] #population size
+  S = length(selectedhhs) #sample size
+  allperactivityTS = rowSums(activityGT)
+  sampleTS  = rowSums(activityGT[,selectedhhs])
+  
+  ## faithfulness result for this TS
+  thisrmse = rmse( allperactivityTS/N, sampleTS/S ) 
+  return (thisrmse)
+}
+  
+  
 ## END HERE

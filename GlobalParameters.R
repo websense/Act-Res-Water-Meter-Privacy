@@ -92,3 +92,17 @@ deltamax = 10^-4 #was 10^-6 but for high res need more search #upper bound for d
 
 SAMPLING_REPEATS = 50 #tests when selecting beta sample
 }
+
+## Pareto front functions
+{
+# v1 dominates v2 if every entry of v1 <= v2 that is v2-v1>=0 AND 
+# at least one v1 < v2  that is v1 != v2
+# here SMALLEST values are best
+dominates <- function(v1,v2) {
+  return ((min(v2-v1) >= 0) & (max(v2-v1) > 0))
+}
+
+incomparable <- function(v1,v2) {
+  return (!dominates(v1,v2) & !dominates(v2,v1))
+}
+}

@@ -15,7 +15,7 @@
   # beta kanon        eps        delta
   
   exposedres = readRDS(paste(RESULTSHIGHRES,"largePopulationHighres.rds",sep=""))
-  #actID Agg Kanon Inliers    N   NN Beta        RMSE   rmsepct
+  #actID Agg Kanon Inliers    N   NN Beta        RMSE
 }
 
 ## Merge all experimental data
