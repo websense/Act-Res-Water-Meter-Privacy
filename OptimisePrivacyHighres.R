@@ -79,10 +79,10 @@
 }
 
 
-## Trial 1: Pareto Front based on MCC, RMSE and EPS
+## Trial 1: Pareto Front based on privacy and utility outputs MCC, RMSE and EPS, DELTA where N is an output
 {
   #variables to optimise on: min is best for all of these (MCC reversed)
-  P1 = E[,.(1-minMCC,maxRMSEpct,eps,N)]
+  P1 = E[,.(1-minMCC,maxRMSEpct,eps,delta)] 
   nP = dim(P1)[1] #number of records
   P1front = rep(1,times=nP) #1 if this dominates, will be set to 0 if any other tuple dominates it
   for (r in 1:nP) 
@@ -97,57 +97,39 @@
   
   
   
-  par(mfrow=c(2,2))
+  par(mfrow=c(2,4))
   pf = which(P1front==1)
-  plot(1-P1$V1,type="l",col="gray",ylab="minMCC",main="Pareto Front for 4 vars")
+  plot(1-P1$V1,type="l",col="gray",ylab="minMCC",main="Priv/Utility outputs")
   lines(pf,(1-P1$V1)[pf],type="p",col="red",pch=20)
   plot(P1$maxRMSEpct,type="l",col="gray",ylab="Sampling RMSE (pct)")
   lines(pf,(P1$maxRMSEpct)[pf],type="p",col="red",pch=20)
   plot(P1$eps,type="l",col="gray",ylab="Differential Privacy Epsilon")
   lines(pf,(P1$eps)[pf],type="p",col="red",pch=20)
+  plot(P1$delta,type="l",col="gray",ylab="Differential Privacy Delta")
+  lines(pf,(P1$delta)[pf],type="p",col="red",pch=20)
+  
+  plot(E$kanon,type="l",col="gray",ylab="Kanon",main="Sample Inputs")
+  lines(pf,(E$kanon)[pf],type="p",col="red",pch=20)
+  
+  plot(E$beta,type="l",col="gray",ylab="Beta sample")
+  lines(pf,(E$beta)[pf],type="p",col="red",pch=20)
+  
+  plot(E$AggSeconds,type="l",col="gray",ylab="Alpha resolution")
+  lines(pf,(E$AggSeconds)[pf],type="p",col="red",pch=20)
+  
   plot(E$N,type="l",col="gray",ylab="Population Size")
   lines(pf,(E$N)[pf],type="p",col="red",pch=20)
   par(mfrow=c(1,1))
   
-  E[which(P1front==1),] #28 solutions
-  # kanon beta        eps        delta ActivityID AggSeconds    minMCC Inliers    N maxRMSEpct
-  # 1:    20 0.50 1.39314718 7.826090e-05     123456       3600 0.3236606    4800 4800  0.5677702
-  # 2:     5 0.10 1.15536052 5.500000e-05     123456         10 0.9686868    5600 5600  0.5298040
-  # 3:     5 0.10 1.15536052 5.500000e-05     123456        900 0.6587754    2400 2400  1.6096912
-  # 4:     5 0.10 1.15536052 5.500000e-05     123456       3600 0.3236606    1600 1600  1.6586423
-  # 5:     5 0.05 0.56129329 6.368983e-05     123456         10 0.9686868    3170 3200  0.7673206
-  # 6:     5 0.05 0.56129329 6.368983e-05     123456        900 0.6587754    1600 1600  2.3566354
-  # 7:    10 0.10 0.38536052 7.898190e-05     123456         10 0.9686868    5600 5600  0.5305722
-  # 8:    10 0.10 0.38536052 7.898190e-05     123456         10 0.9686868    6400 6400  0.5300014
-  # 9:    10 0.10 0.38536052 7.898190e-05     123456       3600 0.3236606    2400 2400  1.6470453
-  # etc
-}
-
-## Trial 2: Pareto Front based on min N and min EPS 
-## for any MCC > 0.9 and RMSE<1.0pct : gives 3 contrasting solns, 
-## there are 28 for the full data
-{
-  #variables to optimise on: min is best for all of these
-  E2 = E[minMCC>0.9 & maxRMSEpct<1.0,][order(eps,N),] #just take an acceptable range of MCC
-  P2 = E2[,.(eps,N)]
-  nP2 = dim(P2)[1] #number of records
-  P2front = rep(1,times=nP2) #1 if this dominates, set to 0 if any other dominates it
-  for (r in 1:nP2) 
-  {
-    #get set that dominates r
-    for (i in 1:nP2) {
-      if (i != r & dominates(P2[i,],P2[r,])) {
-        P2front[r] = 0 #this r is dominated by at least one other
-      }
-    }
-  }
+  E[which(P1front==1),] 
+    # 9 solutions from 211 based on 4 outputs: eps,delta and mcc,rmse
+    # 28 solutions from 211 when N is included in search
+    # 8 solutions when opt only MCC,RMSE,eps,delta all are N 5600 or 6400 and a 10 or 30 sec
   
-  ## show optimal points
-  E2[which(P2front==1),]
-  
-  ## choose first (larger) set for paper
-  xtable(E2[which(P2front==1),.(kanon,beta,AggSeconds,N, eps,delta, minMCC,maxRMSEpct)],
-         digits=c(0, 0,2,0,0, 3,-1, 3,1))
+  #table for paper
+  xtable(E[which(P1front==1),.(kanon,round(beta*100),AggSeconds,N,
+                               eps,delta,minMCC,maxRMSEpct)][order(kanon,V2),],
+         digits=c(0,0,0,0, 0, 3,-1, 1,3))
 }
 
 
@@ -163,100 +145,45 @@
     return (normvec)
   }
   
-  {
-  
     ## E, P1 front Pareto Front based on MCC, RMSE and EPS
-    pdf(file=paste(FIGURESDIR,"HighresParetoFrontMCCRMSEEPS.pdf",sep=""),
-        width=7,height=7)
+    pdf(file=paste(FIGURESDIR,"HighresParetoFront211cases9dom.pdf",sep=""),
+        width=7,height=6)
     {
-      par(mar=c(2, 9, 2, 4) + 0.1, mfrow=c(1,1))
+      par(mar=c(2, 6, 2, 4) + 0.1, mfrow=c(1,1))
       pf = which(P1front==1)
       
-      ## utility min eps
-      plot(minmaxnorm(E$eps),type="l",col="red",pch=1,cex=0.25,
+      ## privacy min eps
+      plot(minmaxnorm(E$eps),type="l",col="red",
            xlab="", #"Parameter Combinations",
            xaxt="n",
-           ylim=c(0,7),ylab="",yaxt="n")
+           ylim=c(0,5.5),ylab="",yaxt="n")
       lines(pf,(minmaxnorm(E$eps))[pf],type="p",col="red",pch=19,cex=1,ylab="",yaxt="n")
-      title("Pareto Front Eps,MCC,RMSE")
     
-      ## utility min RMSE
-      lines(minmaxnorm(E$maxRMSEpct)+1.5,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(E$maxRMSEpct)+1.5)[pf],type="p",col="blue",pch=19,cex=1,ylab="",yaxt="n")
+      ## privacy min delta
+      lines((minmaxnorm(E$delta)+1.5),type="l",col="red")
+      lines(pf,(minmaxnorm(E$delta)+1.5)[pf],type="p",col="red",pch=19,cex=1)
       
       ## utility max minMCC
-      lines(E$minMCC+3,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(E$minMCC+3)[pf],type="p",col="blue",
-            pch=17,cex=1,ylab="",yaxt="n")
+      lines(minmaxnorm(E$minMCC)+3,type="l",col="blue")
+      lines(pf,(minmaxnorm(E$minMCC)+3)[pf],type="p",col="blue",
+            pch=19,cex=1,ylab="",yaxt="n")
       
-      ## free vars
-      lines((minmaxnorm(E$delta)+4.5),type="l",col="red",pch=1,cex=0.25)
-      lines(pf,(minmaxnorm(E$delta)+4.5)[pf],type="p",col="red",pch=17,cex=1)
+      ## utility min RMSE
+      lines(minmaxnorm(E$maxRMSEpct)+4.5,type="l",col="blue")
+      lines(pf,(minmaxnorm(E$maxRMSEpct)+4.5)[pf],type="p",col="blue",
+            pch=19,cex=1,ylab="",yaxt="n")
       
-      lines(minmaxnorm(E$N)+6,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(E$N)+6)[pf],type="p",col="blue",
-            pch=15,cex=1,ylab="",yaxt="n")
-      
-      abline(h=c(0,1,1.5,2.5,3,4, 4.5,5.5,6,7),lty="dotted",col="gray")
-      axis(2,at=c(0.5,2,3.5,5,6.5),c("DP Epsilon","MCC","RMSE","DP Delta","N"),tick=FALSE,las=1)
-      axis(4,at=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),las=1,
+      abline(h=c(0,1,1.5,2.5,3,4, 4.5,5.5),lty="dotted",col="gray")
+      axis(2,at=c(0.5,2,3.5,5),c("DP Epsilon","DP Delta","MCC","RMSE %"),tick=FALSE,las=1)
+      axis(4,at=c(0,1, 1.5,2.5, 3,4, 4.5,5.5),las=1,
            c(round(range(E$eps),digits=2), 
-             round(range(E2$maxRMSEpct),digits=2),
-             round(range(E2$minMCC),digits=2),
-             signif(range(E2$delta),digits=1), 
-             range(E2$N) ))
+             signif(range(E$delta),digits=1), 
+             round(range(E$minMCC),digits=2),
+             round(range(E$maxRMSEpct),digits=2)))
       abline(v=pf,lty="dotted",col="gray")
       
     }
     dev.off()
-    
-    ## E2,P2 front
-    ## Trial 2: Pareto Front E2, P2 front based on min N and min EPS 
-    ## for any MCC > 0.9 and RMSE<1.0pct and delta<1-e04: gives 3 contrasting solns, 
-    pdf(file=paste(FIGURESDIR,"HighresParetoFrontEPSN.pdf",sep=""),
-        width=6,height=4.5)
-    {
-      par(mar=c(2, 9, 2, 4) + 0.1, mfrow=c(1,1))
-      pf = which(P2front==1)
-      plot(minmaxnorm(P2$eps),type="l",col="red",pch=1,cex=0.5,
-           xlab="", #Parameter Combinations",
-           xaxt="n",
-           ylim=c(0,7),ylab="",yaxt="n")
-      lines(pf,(minmaxnorm(P2$eps))[pf],type="p",col="red",pch=19,cex=1,ylab="",yaxt="n")
-      
-      
-      lines(minmaxnorm(P2$N)+1.5,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(P2$N)+1.5)[pf],type="p",col="blue",
-            pch=15,cex=1,ylab="",yaxt="n")
-      
-      ## privacy bounded
-      lines((minmaxnorm(E2$delta)+3),type="l",col="red",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(E2$delta)+3)[pf],type="p",col="red",pch=17,cex=1)
-      
-      ## utility bounded
-      lines(minmaxnorm(E2$maxRMSEpct)+4.5,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(E2$maxRMSEpct)+4.5)[pf],type="p",col="blue",pch=19,cex=1,ylab="",yaxt="n")
-      
-      lines(minmaxnorm(E2$minMCC)+6,type="l",col="blue",pch=1,cex=0.5)
-      lines(pf,(minmaxnorm(E2$minMCC)+6)[pf],type="p",col="blue",
-            pch=17,cex=1,ylab="",yaxt="n")
- 
-      
-      abline(h=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),lty="dotted",col="gray")
-      axis(2,at=c(0.5,2,3.5,5,6.5),
-           c("DP Epsilon","Population N",
-             "DP Delta < 1e-04",
-             "Sampling RMSE < 1",
-             "Activity MCC > 0.9"),tick=FALSE,las=1)
-      axis(4,at=c(0,1, 1.5,2.5, 3,4, 4.5,5.5, 6,7),las=1,
-          c(round(range(E2$eps),digits=2), range(E2$N), signif(range(E2$delta),digits=1), 
-            round(range(E2$maxRMSEpct),digits=2), round(range(E2$minMCC),digits=2) ))
-      abline(v=pf,lty="dotted",col="gray")
-    }
-    dev.off()
-      
-
-  }
   
 }
 

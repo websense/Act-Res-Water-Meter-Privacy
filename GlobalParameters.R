@@ -22,7 +22,7 @@ runalltests = FALSE #set this to true in local context if needed
 {
 aggcol = brewer.pal(8,"Greens")[8:1] #need seq colours, not finishing too light
 lowresaggselection = c(1,2,3,4,12,24)
-lowresaggnames =  paste(lowresaggselection,"hr",sep="")
+lowresaggnames =  paste(lowresaggselection,"hr",sep=" ")
   
 lowresactivitycols = c("royalblue","forestgreen","orange","darkgray")
 lowresactivitynames = c("Leaks","Habits","Absence","Any Use") 
@@ -42,6 +42,9 @@ UNOCCUPIED_MARKER = -20 #indicator of activity else 0
     highresactivitynames = c("Toilet","Shower","Taps",
                              "Clotheswasher","Dishwasher","Bathtub","Any Use") 
     highresactivitypch = 1:7
+    
+    highresshortactivitynames = c("Toilet","Shower","Taps",
+                             "Clothes","Dishes","Bathtub") 
 
     # in multiples of 10 seconds (so last is 1 min)
     highresaggselection = c(1,3,6,6*5,6*15,6*60) #drop 30 mins
