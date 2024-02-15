@@ -17,7 +17,7 @@ If you find this code and data useful, please consider citing:
     @article{TBA,
     title={Activity and Resolution Aware Privacy Protection for Smart Water Meter Databases},
     author={Cardell-Oliver, R., Cominola, A. and Hong, J.},
-    year={2022},
+    year={2024},
     url = {},
     doi = {}
     }
